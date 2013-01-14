@@ -2,50 +2,77 @@
 #
 # Markdown  -  A text-to-HTML conversion tool for web writers
 #
-# PHP Markdown
-# Copyright (c) 2004-2012 Michel Fortin  
+# PHP Markdown  
+# Copyright (c) 2004-2013 Michel Fortin  
 # <http://michelf.com/projects/php-markdown/>
 #
-# Original Markdown
+# Original Markdown  
 # Copyright (c) 2004-2006 John Gruber  
 # <http://daringfireball.net/projects/markdown/>
 #
-
-
-define( 'MARKDOWN_VERSION',  "1.0.1o" ); # Sun 8 Jan 2012
-
+namespace michelf;
 
 #
-# Global default settings:
+# The following constants are deprecated: avoid using them, they'll disappear
+# soon.
+#
+# You can get the parser's version using the constant inside of the parser
+# class: \michelf\Markdown::MARKDOWN_VERSION.
 #
 
-# Change to ">" for HTML output
-@define( 'MARKDOWN_EMPTY_ELEMENT_SUFFIX',  " />");
-
-# Define the width of a tab for code blocks.
-@define( 'MARKDOWN_TAB_WIDTH',     4 );
-
-
-#
-# WordPress settings:
-#
-
-# Change to false to remove Markdown from posts and/or comments.
-@define( 'MARKDOWN_WP_POSTS',      true );
-@define( 'MARKDOWN_WP_COMMENTS',   true );
-
-
-
-### Standard Function Interface ###
-
-@define( 'MARKDOWN_PARSER_CLASS',  'Markdown_Parser' );
+const  MARKDOWNLIB_VERSION  =  "1.3-beta1";  # Sun 13 Jan 2013
+const  MARKDOWN_VERSION  =  "1.0.1p";  # Sun 13 Jan 2013
+const  MARKDOWNEXTRA_VERSION  =  "1.2.6";  # Sun 13 Jan 2013
 
 
 #
 # Markdown Parser Class
 #
 
-class Markdown_Parser {
+class Markdown {
+
+	### Version ###
+
+	const  MARKDOWN_VERSION  = \michelf\MARKDOWN_VERSION;
+
+	### Simple Function Interface ###
+
+	static function defaultTransform($text) {
+	#
+	# Initialize the parser and return the result of its transform method.
+	# This will work fine for derived classes too.
+	#
+		# Take parser class on which this function was called.
+		$parser_class = \get_called_class();
+
+		# try to take parser from the static parser list
+		static $parser_list;
+		$parser =& $parser_list[$parser_class];
+
+		# create the parser it not already set
+		if (!$parser)
+			$parser = new $parser_class;
+
+		# Transform text using parser.
+		return $parser->transform($text);
+	}
+
+	### Configuration Variables ###
+
+	# Change to ">" for HTML output.
+	var $empty_element_suffix = " />";
+	var $tab_width = 4;
+	
+	# Change to `true` to disallow markup or entities.
+	var $no_markup = false;
+	var $no_entities = false;
+	
+	# Predefined urls and titles for reference links and images.
+	var $predef_urls = array();
+	var $predef_titles = array();
+
+
+	### Parser Implementation ###
 
 	# Regex to match balanced [brackets].
 	# Needed to insert a maximum bracked depth while converting to PHP.
@@ -59,20 +86,8 @@ class Markdown_Parser {
 	var $escape_chars = '\`*_{}[]()>#+-.!';
 	var $escape_chars_re;
 
-	# Change to ">" for HTML output.
-	var $empty_element_suffix = MARKDOWN_EMPTY_ELEMENT_SUFFIX;
-	var $tab_width = MARKDOWN_TAB_WIDTH;
-	
-	# Change to `true` to disallow markup or entities.
-	var $no_markup = false;
-	var $no_entities = false;
-	
-	# Predefined urls and titles for reference links and images.
-	var $predef_urls = array();
-	var $predef_titles = array();
 
-
-	function Markdown_Parser() {
+	function __construct() {
 	#
 	# Constructor function. Initialize appropriate member variables.
 	#
@@ -239,7 +254,9 @@ class Markdown_Parser {
 		#
 		$block_tags_a_re = 'ins|del';
 		$block_tags_b_re = 'p|div|h[1-6]|blockquote|pre|table|dl|ol|ul|address|'.
-						   'script|noscript|form|fieldset|iframe|math';
+						   'script|noscript|form|fieldset|iframe|math|svg|'.
+						   'article|section|nav|aside|hgroup|header|footer|'.
+						   'figure';
 
 		# Regular expression for the content of a block tag.
 		$nested_tags_level = 4;
@@ -1372,12 +1389,16 @@ class Markdown_Parser {
 				|
 					<\?.*?\?> | <%.*?%>		# processing instruction
 				|
-					<[/!$]?[-a-zA-Z0-9:_]+	# regular tags
+					<[!$]?[-a-zA-Z0-9:_]+	# regular tags
 					(?>
 						\s
 						(?>[^"\'>]+|"[^"]*"|\'[^\']*\')*
 					)?
 					>
+				|
+					<[-a-zA-Z0-9:_]+\s*/> # xml-style empty tag
+				|
+					</[-a-zA-Z0-9:_]+\s*> # closing tag
 			').'
 				)
 				}xs';
@@ -1501,89 +1522,3 @@ class Markdown_Parser {
 	}
 
 }
-
-/*
-
-PHP Markdown
-============
-
-Description
------------
-
-This is a PHP translation of the original Markdown formatter written in
-Perl by John Gruber.
-
-Markdown is a text-to-HTML filter; it translates an easy-to-read /
-easy-to-write structured text format into HTML. Markdown's text format
-is most similar to that of plain text email, and supports features such
-as headers, *emphasis*, code blocks, blockquotes, and links.
-
-Markdown's syntax is designed not as a generic markup language, but
-specifically to serve as a front-end to (X)HTML. You can use span-level
-HTML tags anywhere in a Markdown document, and you can use block level
-HTML tags (like <div> and <table> as well).
-
-For more information about Markdown's syntax, see:
-
-<http://daringfireball.net/projects/markdown/>
-
-
-Bugs
-----
-
-To file bug reports please send email to:
-
-<michel.fortin@michelf.com>
-
-Please include with your report: (1) the example input; (2) the output you
-expected; (3) the output Markdown actually produced.
-
-
-Version History
---------------- 
-
-See the readme file for detailed release notes for this version.
-
-
-Copyright and License
----------------------
-
-PHP Markdown
-Copyright (c) 2004-2009 Michel Fortin  
-<http://michelf.com/>  
-All rights reserved.
-
-Based on Markdown
-Copyright (c) 2003-2006 John Gruber   
-<http://daringfireball.net/>   
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-*	Redistributions of source code must retain the above copyright notice,
-	this list of conditions and the following disclaimer.
-
-*	Redistributions in binary form must reproduce the above copyright
-	notice, this list of conditions and the following disclaimer in the
-	documentation and/or other materials provided with the distribution.
-
-*	Neither the name "Markdown" nor the names of its contributors may
-	be used to endorse or promote products derived from this software
-	without specific prior written permission.
-
-This software is provided by the copyright holders and contributors "as
-is" and any express or implied warranties, including, but not limited
-to, the implied warranties of merchantability and fitness for a
-particular purpose are disclaimed. In no event shall the copyright owner
-or contributors be liable for any direct, indirect, incidental, special,
-exemplary, or consequential damages (including, but not limited to,
-procurement of substitute goods or services; loss of use, data, or
-profits; or business interruption) however caused and on any theory of
-liability, whether in contract, strict liability, or tort (including
-negligence or otherwise) arising in any way out of the use of this
-software, even if advised of the possibility of such damage.
-
-*/
-?>
